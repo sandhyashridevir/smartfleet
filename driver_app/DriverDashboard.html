@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>EV Driver Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#03080d; --s1:#071018; --s2:#0b1825;
+      --border:#0d2235; --border2:#142e45;
+      --cyan:#00d4ff; --green:#00ff9d; --warn:#ffd740;
+      --orange:#ff7043; --red:#ff1744; --purple:#b388ff;
+      --text:#b8d4e0; --dim:#2d5570;
+      --mono:'Share Tech Mono',monospace;
+      --head:'Exo 2',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--head);min-height:100vh;
+      background-image:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(0,212,255,.07) 0%,transparent 55%);}
+    body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+      background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,212,255,.01) 3px,rgba(0,212,255,.01) 4px);}
+
+    .shell{max-width:440px;margin:0 auto;padding:16px;min-height:100vh}
+
+    /* HEADER */
+    .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;
+      padding-bottom:14px;border-bottom:1px solid var(--border)}
+    .hdr-left{}
+    .hdr-label{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:3px;text-transform:uppercase}
+    .hdr-vid{font-family:var(--mono);font-size:30px;color:var(--cyan);text-shadow:0 0 16px rgba(0,212,255,.4);letter-spacing:3px}
+    .conn-pill{display:flex;align-items:center;gap:5px;background:rgba(0,255,157,.07);
+      border:1px solid rgba(0,255,157,.2);border-radius:20px;padding:5px 10px}
+    .conn-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+    .conn-txt{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:2px}
+
+    /* VEHICLE PICKER */
+    .vpick{margin-bottom:16px}
+    .vpick label{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:2px;display:block;margin-bottom:5px}
+    .vpick select{width:100%;background:var(--s1);border:1px solid var(--border2);color:var(--text);
+      padding:9px 12px;border-radius:6px;font-family:var(--mono);font-size:13px;outline:none;cursor:pointer}
+    .vpick select:focus{border-color:var(--cyan)}
+
+    /* BATTERY RING */
+    .ring-wrap{display:flex;flex-direction:column;align-items:center;margin:20px 0}
+    .ring-cont{position:relative;width:170px;height:170px}
+    .ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
+    .ring-bg{fill:none;stroke:var(--border2);stroke-width:12}
+    .ring-fg{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dasharray 1.2s ease,stroke .5s}
+    .ring-inner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+    .ring-pct{font-family:var(--mono);font-size:36px;color:#fff;line-height:1}
+    .ring-sym{font-family:var(--mono);font-size:12px;color:var(--dim)}
+    .ring-label{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:10px;letter-spacing:3px;text-transform:uppercase}
+
+    /* ALERTS */
+    #alertzone{margin-bottom:14px}
+    .al{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;margin-bottom:8px;border-left:3px solid}
+    .al-crit{background:rgba(255,23,68,.1);border-left-color:var(--red);animation:redpulse 1.8s infinite}
+    @keyframes redpulse{0%,100%{border-left-color:var(--red)}50%{border-left-color:rgba(255,23,68,.3)}}
+    .al-warn{background:rgba(255,215,64,.06);border-left-color:var(--warn)}
+    .al-icon{font-size:18px;margin-top:1px}
+    .al-title{font-size:14px;font-weight:600}
+    .al-body{font-family:var(--mono);font-size:10px;color:var(--text);opacity:.8;margin-top:2px;line-height:1.5}
+
+    /* INFO GRID */
+    .igrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .icard{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+    .icard-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+    .icard-val{font-size:20px;font-weight:700;color:#fff}
+    .icard-sub{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px}
+
+    /* DELIVERY CARD */
+    .dcard{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px;border-left:3px solid var(--cyan)}
+    .dcard-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:2px;margin-bottom:4px}
+    .dcard-val{font-size:20px;font-weight:700;color:#fff}
+
+    /* PREDICTION */
+    .pred-card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+    .pred-title{font-family:var(--mono);font-size:9px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px}
+    .pred-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:6px}
+    .pred-val{color:var(--warn)}
+
+    /* TRIP LOG */
+    .triplog{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+    .triplog-title{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase}
+    .log-entry{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px}
+    .log-entry:last-child{border-bottom:none}
+    .log-ts{color:var(--dim);min-width:70px}
+    .log-msg{color:var(--text)}
+
+    /* FOOTER */
+    .footer{text-align:center;font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-label">Driver Console</div>
+      <div class="hdr-vid" id="vid-disp">EV001</div>
+    </div>
+    <div class="conn-pill">
+      <div class="conn-dot"></div>
+      <div class="conn-txt">CONNECTED</div>
+    </div>
+  </div>
+
+  <div class="vpick">
+    <label>SELECT YOUR VEHICLE</label>
+    <select id="vsel" onchange="changeVehicle(this.value)">
+      <option value="EV001">EV001 — Delivery Unit Alpha</option>
+      <option value="EV002">EV002 — Delivery Unit Beta</option>
+      <option value="EV003">EV003 — Delivery Unit Gamma</option>
+    </select>
+  </div>
+
+  <div class="ring-wrap">
+    <div class="ring-cont">
+      <svg class="ring-svg" viewBox="0 0 120 120">
+        <circle class="ring-bg" cx="60" cy="60" r="50"/>
+        <circle class="ring-fg" id="ring" cx="60" cy="60" r="50" stroke-dasharray="0 314" stroke="#00d4ff"/>
+      </svg>
+      <div class="ring-inner">
+        <div class="ring-pct" id="bat-pct">—</div>
+        <div class="ring-sym">%</div>
+      </div>
+    </div>
+    <div class="ring-label">Battery Level</div>
+  </div>
+
+  <div id="alertzone"></div>
+
+  <div class="igrid">
+    <div class="icard">
+      <div class="icard-lbl">Temperature</div>
+      <div class="icard-val" id="temp-val">—</div>
+      <div class="icard-sub">CELSIUS</div>
+    </div>
+    <div class="icard">
+      <div class="icard-lbl">Location</div>
+      <div class="icard-val" style="font-size:12px;" id="loc-val">—</div>
+      <div class="icard-sub">LAT / LON</div>
+    </div>
+    <div class="icard">
+      <div class="icard-lbl">Status</div>
+      <div class="icard-val" id="status-val" style="font-size:14px">—</div>
+      <div class="icard-sub" id="status-sub">VEHICLE STATE</div>
+    </div>
+    <div class="icard">
+      <div class="icard-lbl">Last Update</div>
+      <div class="icard-val" style="font-size:14px;" id="upd-val">—</div>
+      <div class="icard-sub">TIME</div>
+    </div>
+  </div>
+
+  <div class="dcard">
+    <div class="dcard-lbl">Assigned Delivery</div>
+    <div class="dcard-val" id="del-val">Loading...</div>
+  </div>
+
+  <div class="pred-card" id="pred-card">
+    <div class="pred-title">⚡ BATTERY PREDICTION (AI)</div>
+    <div class="pred-row">Current: <span class="pred-val" id="pred-curr">—</span></div>
+    <div class="pred-row">Next reading: <span class="pred-val" id="pred-next">—</span></div>
+    <div class="pred-row">Trend: <span id="pred-trend" class="pred-val">—</span></div>
+    <div class="pred-row">Slope: <span id="pred-slope" class="pred-val">—</span> per step</div>
+  </div>
+
+  <div class="triplog">
+    <div class="triplog-title">📋 Trip Event Log</div>
+    <div id="logentries">
+      <div class="log-entry"><span class="log-ts">--:--:--</span><span class="log-msg">Waiting for telemetry...</span></div>
+    </div>
+  </div>
+
+  <div class="footer" id="footer-ts">Last sync: —</div>
+</div>
+
+<script>
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:8000'
+  : `http://${window.location.hostname}:8000`;
+
+let currentVehicle = 'EV001';
+let lastBattery = null;
+const eventLog = [];
+
+function addLog(msg, level = 'info') {
+  const ts = new Date().toLocaleTimeString();
+  eventLog.unshift({ ts, msg, level });
+  if (eventLog.length > 10) eventLog.pop();
+  renderLog();
+}
+
+function renderLog() {
+  const colors = { info: 'var(--text)', warn: 'var(--warn)', crit: 'var(--red)', ok: 'var(--green)' };
+  document.getElementById('logentries').innerHTML = eventLog.map(e =>
+    `<div class="log-entry"><span class="log-ts">${e.ts}</span><span class="log-msg" style="color:${colors[e.level]}">${e.msg}</span></div>`
+  ).join('');
+}
+
+function changeVehicle(v) {
+  currentVehicle = v;
+  document.getElementById('vid-disp').textContent = v;
+  lastBattery = null;
+  addLog(`Switched to ${v}`, 'ok');
+  loadData();
+}
+
+function setRing(pct) {
+  const r = 50, circ = 2 * Math.PI * r;
+  const fill = (pct / 100) * circ;
+  const ring = document.getElementById('ring');
+  ring.setAttribute('stroke-dasharray', `${fill} ${circ}`);
+  let color = '#00ff9d';
+  if (pct < 15) color = '#ff1744';
+  else if (pct < 30) color = '#ff7043';
+  else if (pct < 55) color = '#ffd740';
+  ring.setAttribute('stroke', color);
+  document.getElementById('bat-pct').textContent = Math.round(pct);
+  document.getElementById('bat-pct').style.color = color;
+}
+
+function setAlerts(pct, chargingStop) {
+  const z = document.getElementById('alertzone');
+  const alerts = [];
+
+  if (pct < 10) {
+    alerts.push(`<div class="al al-crit"><div class="al-icon">🚨</div><div><div class="al-title" style="color:var(--red)">CRITICAL — Charge Immediately</div><div class="al-body">Battery at ${pct.toFixed(1)}%. Head to: <strong>${chargingStop || 'nearest station'}</strong> NOW.</div></div></div>`);
+  } else if (pct < 25) {
+    alerts.push(`<div class="al al-warn"><div class="al-icon">⚡</div><div><div class="al-title" style="color:var(--warn)">Low Battery — Charge Soon</div><div class="al-body">Battery at ${pct.toFixed(1)}%.<br>Recommended: <strong>${chargingStop || 'nearest station'}</strong></div></div></div>`);
+  }
+
+  z.innerHTML = alerts.join('');
+}
+
+async function loadData() {
+  try {
+    // Parallel fetch
+    const [sRes, dRes, pRes] = await Promise.all([
+      fetch(`${API}/vehicles/status`),
+      fetch(`${API}/fleet/delivery_plan`),
+      fetch(`${API}/vehicles/predict_series/${currentVehicle}?steps=6`)
+    ]);
+    const [sJson, dJson, pJson] = await Promise.all([sRes.json(), dRes.json(), pRes.json()]);
+
+    // Vehicle status
+    const v = (sJson.data || []).find(x => x.vehicle_id === currentVehicle);
+    if (v) {
+      const pct = v.battery_percent;
+      setRing(pct);
+      document.getElementById('temp-val').textContent = v.temperature?.toFixed(1) + '°';
+      document.getElementById('loc-val').textContent = `${v.lat?.toFixed(4)},\n${v.lon?.toFixed(4)}`;
+      document.getElementById('upd-val').textContent = v.timestamp ? new Date(v.timestamp).toLocaleTimeString() : '—';
+
+      // Status
+      let statusText = '🟢 NOMINAL', statusSub = 'VEHICLE STATE';
+      if (pct < 10) { statusText = '🔴 CRITICAL'; statusSub = 'CHARGE NOW'; }
+      else if (pct < 25) { statusText = '🟡 LOW BAT'; statusSub = 'CHARGE SOON'; }
+      else if (pct > 95) { statusText = '⚡ CHARGING'; statusSub = 'FULLY CHARGED'; }
+      document.getElementById('status-val').textContent = statusText;
+      document.getElementById('status-sub').textContent = statusSub;
+
+      // Log significant changes
+      if (lastBattery !== null) {
+        const diff = pct - lastBattery;
+        if (diff < -5) addLog(`Battery dropped ${Math.abs(diff).toFixed(1)}% → ${pct.toFixed(1)}%`, 'warn');
+        else if (diff > 5) addLog(`Battery charged +${diff.toFixed(1)}% → ${pct.toFixed(1)}%`, 'ok');
+        if (pct < 15 && lastBattery >= 15) addLog('⚠️ Battery below 15% threshold!', 'crit');
+        if (pct < 10 && lastBattery >= 10) addLog('🚨 CRITICAL: Battery below 10%!', 'crit');
+      }
+      lastBattery = pct;
+    }
+
+    // Delivery
+    const d = (dJson.data || []).find(x => x.vehicle_id === currentVehicle);
+    if (d) {
+      document.getElementById('del-val').textContent = d.destination || 'Unassigned';
+      setAlerts(v?.battery_percent ?? 100, d.charging_stop);
+    }
+
+    // Prediction
+    if (pJson.status === 'success' && pJson.data?.historical) {
+      const pd = pJson.data;
+      const curr = pd.historical[pd.historical.length - 1];
+      const next = pd.predicted?.[0];
+      const tColors = { charging: 'var(--green)', stable: 'var(--warn)', draining: 'var(--red)' };
+      document.getElementById('pred-curr').textContent = curr?.toFixed(1) + '%';
+      document.getElementById('pred-next').textContent = next?.toFixed(1) + '%';
+      document.getElementById('pred-trend').textContent = pd.trend?.toUpperCase();
+      document.getElementById('pred-trend').style.color = tColors[pd.trend] || 'var(--warn)';
+      document.getElementById('pred-slope').textContent = pd.slope;
+    }
+
+    document.getElementById('footer-ts').textContent = `Last sync: ${new Date().toLocaleTimeString()} · Auto-refresh 5s`;
+
+    // Log initial connect
+    if (eventLog.length === 0 || (eventLog.length === 1 && eventLog[0].msg.includes('Waiting'))) {
+      eventLog.length = 0;
+      addLog(`Connected to ${currentVehicle}`, 'ok');
+    }
+
+  } catch(e) {
+    document.getElementById('footer-ts').textContent = `⚠️ Connection error — retrying... ${new Date().toLocaleTimeString()}`;
+    addLog('Connection error', 'crit');
+  }
+}
+
+// Init
+addLog('Driver console started', 'ok');
+loadData();
+setInterval(loadData, 5000);
+</script>
+</body>
+</html>
